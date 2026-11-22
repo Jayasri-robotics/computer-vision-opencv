@@ -1,3 +1,4 @@
+
 import cv2
 import mediapipe as mp
 import time
@@ -34,6 +35,7 @@ print("Hand Tracking Started. Press Q to exit.")
 
 try:
     with HandLandmarker.create_from_options(options) as landmarker:
+
         while True:
             success, frame = camera.read()
 
@@ -42,7 +44,11 @@ try:
                 break
 
             frame = cv2.flip(frame, 1)
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            rgb_frame = cv2.cvtColor(
+                frame,
+                cv2.COLOR_BGR2RGB
+            )
 
             mp_image = mp.Image(
                 image_format=mp.ImageFormat.SRGB,
@@ -58,16 +64,25 @@ try:
 
             height, width, _ = frame.shape
 
-            for hand in result.hand_landmarks:
+            for hand_index, hand in enumerate(result.hand_landmarks):
+
                 points = []
 
                 for landmark in hand:
                     x = int(landmark.x * width)
                     y = int(landmark.y * height)
+
                     points.append((x, y))
 
-                    cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
+                    cv2.circle(
+                        frame,
+                        (x, y),
+                        5,
+                        (0, 255, 0),
+                        -1
+                    )
 
+                # Draw hand skeleton
                 for start, end in connections:
                     cv2.line(
                         frame,
@@ -77,6 +92,29 @@ try:
                         2
                     )
 
+                # Get handedness
+                handedness = result.handedness[hand_index][0].category_name
+
+                # Correct label for mirrored webcam view
+                if handedness == "Left":
+                    handedness = "Right"
+                else:
+                    handedness = "Left"
+
+                # Display hand label
+                wrist_x, wrist_y = points[0]
+
+                cv2.putText(
+                    frame,
+                    handedness + " Hand",
+                    (wrist_x - 50, wrist_y - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 255, 255),
+                    2
+                )
+
+            # Display hand count
             hand_count = len(result.hand_landmarks)
 
             cv2.putText(
@@ -89,7 +127,10 @@ try:
                 2
             )
 
-            cv2.imshow("Real-Time Hand Tracking", frame)
+            cv2.imshow(
+                "Real-Time Hand Tracking",
+                frame
+            )
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
